@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Viewers Ranking</title>
+    <style>
+        /* ESTILOS CSS PARA EL RANKING Y LA BARRA DE PROGRESO */
+        body { background-color: rgba(0, 0, 0, 0); margin: 0; font-family: sans-serif; }
+        #ranking-container { width: 400px; padding: 10px; }
+        .channel-bar {
+            display: flex;
+            align-items: center;
+            height: 40px;
+            margin-bottom: 5px;
+            background: #2c3e50; /* Fondo base de la barra */
+            border-radius: 5px;
+            position: relative;
+            transition: top 0.5s ease-out; /* Animación de movimiento vertical */
+        }
+        .progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9); /* Color de la barra */
+            border-radius: 5px;
+            transition: width 0.8s ease-out; /* Animación de progreso */
+            z-index: 1;
+        }
+        .info {
+            position: relative;
+            z-index: 2; /* Para que el texto quede encima de la barra */
+            padding: 0 10px;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .name { font-size: 14px; }
+        .views { font-size: 16px; color: #f1c40f; }
+    </style>
+</head>
+<body>
+
+<div id="ranking-container">
+    </div>
+
+<script>
+    const container = document.getElementById('ranking-container');
+    const API_URL = "http://127.0.0.1:5000/live_data";
+    const POLLING_RATE = 5000; // 5 segundos para actualizar el ranking
+
+    // ⚠️ ATENCIÓN: REEMPLAZA ESTOS IDs y nombres con tu configuración REAL
+    const CHANNEL_NAMES = {
+        "0bhFagWP_W0": "Tu Canal Principal",
+        "cb12KmMMDJA": "Canal Rival o Amigo"
+    };
+
+    function updateRanking() {
+        fetch(API_URL, { mode: 'cors' })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                // 1. Convertir y Ordenar los Datos
+                const channels = Object.keys(data)
+                    .map(id => ({
+                        id: id,
+                        name: CHANNEL_NAMES[id] || id, // Usa el nombre amigable o el ID
+                        views: parseInt(data[id].live_viewers) || 0 // Asegura que las vistas sean un número
+                    }))
+                    .sort((a, b) => b.views - a.views); // Ordena de mayor a menor
+
+                // 2. Determinar el Ancho Máximo (el canal con más vistas)
+                const maxViews = channels.length > 0 ? channels[0].views : 0;
+                
+                // 3. Renderizar y Animar
+                channels.forEach((channel, index) => {
+                    let bar = document.getElementById(`bar-${channel.id}`);
+                    
+                    // Crear el elemento si no existe
+                    if (!bar) {
+                        bar = document.createElement('div');
+                        bar.id = `bar-${channel.id}`;
+                        bar.classList.add('channel-bar');
+                        bar.innerHTML = `
+                            <div class="progress" id="progress-${channel.id}"></div>
+                            <div class="info">
+                                <span class="name">${channel.name}</span>
+                                <span class="views" id="views-${channel.id}">0</span>
+                            </div>
+                        `;
+                        // Añadir temporalmente al final
+                        container.appendChild(bar);
+                    }
+
+                    // Actualizar el progreso (la barra se anima por CSS)
+                    const progressElement = document.getElementById(`progress-${channel.id}`);
+                    const viewsElement = document.getElementById(`views-${channel.id}`);
+                    
+                    // Calcular porcentaje y establecer ancho de la barra
+                    const widthPercent = maxViews > 0 ? (channel.views / maxViews) * 100 : 0;
+                    progressElement.style.width = `${widthPercent}%`;
+                    
+                    // Actualizar texto de vistas
+                    viewsElement.textContent = channel.views.toLocaleString();
+
+                    // Mover la barra a su posición correcta (la animación 'transition: top' en CSS lo hace suave)
+                    container.insertBefore(bar, container.children[index]);
+                });
+            })
+            .catch(error => {
+                console.error('Error al obtener datos de la caché:', error);
+                // Si hay un error de conexión, se detiene
+            });
+    }
+
+    // Ejecutar inmediatamente y luego cada 5 segundos
+    updateRanking();
+    setInterval(updateRanking, POLLING_RATE);
+</script>
+
+</body>
+</html>

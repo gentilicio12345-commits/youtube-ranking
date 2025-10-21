@@ -47,7 +47,7 @@
 
 <script>
     const container = document.getElementById('ranking-container');
-    const API_URL = "http://127.0.0.1:5000/live_data";
+    const API_URL = "http://127.0.0.1:8888/live_data";
     const POLLING_RATE = 5000; // 5 segundos para actualizar el ranking
 
     // ⚠️ ATENCIÓN: REEMPLAZA ESTOS IDs y nombres con tu configuración REAL
@@ -57,7 +57,7 @@
     };
 
     function updateRanking() {
-        fetch(API_URL, { mode: 'cors' })
+        fetch(API_URL)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
